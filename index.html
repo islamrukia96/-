@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="bn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>চান্দাইকোনা মটরস</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--bd:#e3e6ea;--pri:#1d6fd8;--red:#c62828;--grn:#1b7f3b}
+@media (prefers-color-scheme:dark){:root{--bg:#14171b;--card:#1d2127;--tx:#eceff3;--mut:#9aa4b2;--bd:#2c323a;--pri:#5b9cf0;--red:#ef7373;--grn:#59c27a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,"Noto Sans Bengali","Segoe UI",sans-serif}
+.w{max-width:760px;margin:auto;padding:12px}
+.hd{display:flex;justify-content:space-between;align-items:center}h1{font-size:18px;margin:4px 0 10px}
+nav{display:flex;gap:6px;margin-bottom:12px}
+nav button{flex:1;padding:9px 4px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;font:inherit}
+nav button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
+.c h2{font-size:15px;margin:0 0 8px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.k{font-size:12px;color:var(--mut)}.v{font-size:19px;font-weight:700}
+input,select{width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.r{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}.r>*{flex:1;min-width:90px}
+.b{padding:8px 12px;border:0;border-radius:8px;background:var(--pri);color:#fff;font:inherit;cursor:pointer}
+.b.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd);padding:5px 8px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--bd);align-items:center}
+.red{color:var(--red)}.grn{color:var(--grn)}.m{color:var(--mut);font-size:13px}
+.tot{text-align:right;font-weight:700;margin:6px 0}.ac{display:flex;gap:4px;justify-content:flex-end;margin-top:4px}
+#bill{display:none}
+@media print{.w{display:none}#bill{display:block;color:#000;font:14px sans-serif;max-width:320px}#bill table{width:100%;border-collapse:collapse}#bill td{padding:2px 0}}
+</style></head><body>
+<div class="w"><div class="hd"><h1>🔧 দোকান হিসাব</h1><div><span id="st" class="m"></span> <button class="b s" onclick="load()">↻</button> <button class="b s" onclick="logout()">বের হন</button></div></div>
+<nav id="nav"></nav><div id="main"></div></div><div id="bill"></div>
+<script>
+const API='https://script.google.com/macros/s/AKfycbzJlc55T53GLfqNTIX9sjVjrQYlZV-OEi2m9duarfavCEHMMT5L_KgIeqJ37LdxGv6p/exec', SHOP='চান্দাইকোনা মটরস';
+let S=null,PASS=localStorage.getItem('dh_pass')||'',USER=localStorage.getItem('dh_user')||'admin',ROLE='',USERS=[],q=Promise.resolve();
+let tab='home',cart=[],cur=null,saleCid='',paidVal='';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>'৳'+Number(n||0).toLocaleString('en-IN');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const today=()=>new Date().toLocaleDateString('en-CA');
+const P=id=>S.products.find(p=>p.id===id),C=id=>S.customers.find(c=>c.id===id);
+const due=cid=>S.txs.filter(t=>t.cid===cid).reduce((a,t)=>a+(t.type==='sale'?t.total-t.paid:-t.amount),0);
+const setSt=t=>$('st').textContent=t||'';
+async function call(a,data){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:a,user:USER,pass:PASS,data})});return r.json()}
+function login(bad){$('nav').innerHTML='';$('main').innerHTML=`<div class="c"><h2>লগইন</h2>${bad?'<div class="red">পাসওয়ার্ড ভুল</div>':''}<div class="r"><input id="un" placeholder="ইউজার নাম" value="${esc(USER)}"><input id="pw" type="password" placeholder="পাসওয়ার্ড"><button class="b" onclick="USER=$('un').value.trim();PASS=$('pw').value;localStorage.setItem('dh_user',USER);localStorage.setItem('dh_pass',PASS);load()">ঢুকুন</button></div></div>`}
+function logout(){PASS='';S=null;localStorage.removeItem('dh_pass');login()}
+async function load(){
+ if(!PASS)return login();
+ setSt('লোড হচ্ছে…');
+ try{const r=await call('load');if(r.error){PASS='';localStorage.removeItem('dh_pass');setSt('');return login(true)}S=r.data;ROLE=r.role;setSt('');render()}
+ catch(e){setSt('⚠ সংযোগ হয়নি')}
+}
+function save(){setSt('সেভ হচ্ছে…');q=q.then(async()=>{try{const r=await call('save',S);setSt(r.ok?'✓ সেভ হয়েছে':'⚠ সেভ হয়নি')}catch(e){setSt('⚠ সেভ হয়নি')}})}
+const tabs=[['home','হোম'],['sale','বিক্রি'],['cust','কাস্টমার'],['prod','প্রোডাক্ট']];
+function go(t){tab=t;cur=null;render();if(t==='users')uCall('users')}
+function render(){
+ $('nav').innerHTML=(ROLE==='admin'?tabs.concat([['users','ইউজার']]):tabs).map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
+ $('main').innerHTML=({home:vHome,sale:vSale,cust:vCust,prod:vProd,users:vUsers})[tab]();
+}
+function txLine(t){
+ if(t.type==='pay')return `<div class="row"><div>${t.date} · <b class="grn">জমা</b> ${esc(t.cname||'')}</div><div style="text-align:right"><b class="grn">${money(t.amount)}</b><div class="ac"><button class="b s" onclick="editPay('${t.id}')">✎</button><button class="b s" onclick="delTx('${t.id}')">🗑</button></div></div></div>`;
+ const it=t.items.map(i=>`${esc(i.name)} ×${i.qty}`).join(', '),d=t.total-t.paid;
+ return `<div class="row"><div>${t.date} · ${esc(t.cname||'নগদ')} <span class="m">(${esc(t.by||'')})</span><div class="m">${it}</div></div><div style="text-align:right"><b>${money(t.total)}</b>${d>0?`<div class="m red">বাকি ${money(d)}</div>`:''}<div class="ac"><button class="b s" onclick="bill('${t.id}')">🖨</button><button class="b s" onclick="editSale('${t.id}')">✎</button><button class="b s" onclick="delTx('${t.id}')">🗑</button></div></div></div>`;
+}
+function vHome(){
+ const sl=S.txs.filter(t=>t.type==='sale'),td=S.txs.filter(t=>t.date===today());
+ const sales=td.filter(t=>t.type==='sale').reduce((a,t)=>a+t.total,0);
+ const cash=td.reduce((a,t)=>a+(t.type==='sale'?t.paid:t.amount),0);
+ const pf=l=>l.reduce((a,t)=>a+t.total-t.cost,0);
+ const totDue=S.customers.reduce((a,c)=>a+Math.max(0,due(c.id)),0);
+ const low=S.products.filter(p=>p.stock<=3);
+ return `<div class="c"><div class="g"><div><div class="k">আজকের বিক্রি</div><div class="v">${money(sales)}</div></div>
+ <div><div class="k">আজকের নগদ প্রাপ্তি</div><div class="v grn">${money(cash)}</div></div>
+ <div><div class="k">আজকের লাভ</div><div class="v grn">${money(pf(td.filter(t=>t.type==='sale')))}</div></div>
+ <div><div class="k">মোট লাভ</div><div class="v grn">${money(pf(sl))}</div></div>
+ <div><div class="k">মোট বাকি</div><div class="v red">${money(totDue)}</div></div></div></div>
+ ${low.length?`<div class="c"><h2>স্টক কম</h2>${low.map(p=>`<div class="row"><span>${esc(p.name)}</span><b class="red">${p.stock}</b></div>`).join('')}</div>`:''}
+ <div class="c"><h2>শেষ লেনদেন</h2>${S.txs.slice(-8).reverse().map(txLine).join('')||'<div class="m">কোনো লেনদেন নেই</div>'}</div>`;
+}
+function vSale(){
+ const tot=cart.reduce((a,i)=>a+i.qty*i.price,0);
+ return `<div class="c"><h2>নতুন বিক্রি</h2>
+ <select onchange="saleCid=this.value"><option value="">নগদ / ওয়াক-ইন</option>${S.customers.map(c=>`<option value="${c.id}" ${c.id===saleCid?'selected':''}>${esc(c.name)} (বাকি ${money(due(c.id))})</option>`).join('')}</select>
+ <div class="r" style="margin-top:10px"><select id="ps" onchange="pick()" style="flex:2"><option value="">প্রোডাক্ট বাছুন</option>${S.products.map(p=>`<option value="${p.id}">${esc(p.name)} (স্টক ${p.stock})</option>`).join('')}</select>
+ <input id="pq" type="number" min="1" value="1"><input id="pp" type="number" min="0" placeholder="দাম"><button class="b s" onclick="addLine()">+ যোগ</button></div>
+ ${cart.map((i,x)=>`<div class="row"><span>${esc(i.name)} ×${i.qty} @ ${money(i.price)}</span><span><b>${money(i.qty*i.price)}</b> <button class="b s" onclick="cart.splice(${x},1);render()">✕</button></span></div>`).join('')}
+ <div class="tot">মোট: ${money(tot)}</div>
+ <div class="r"><input type="number" min="0" value="${paidVal}" oninput="paidVal=this.value" placeholder="এখন কত দিল? (খালি = পুরো)"><button class="b" onclick="saveSale()">বিক্রি সেভ</button></div></div>`;
+}
+function pick(){const p=P($('ps').value);if(p)$('pp').value=p.price}
+function addLine(){
+ const p=P($('ps').value),n=+$('pq').value;
+ if(!p||n<1)return alert('প্রোডাক্ট ও পরিমাণ দিন');
+ const used=cart.filter(i=>i.pid===p.id).reduce((a,i)=>a+i.qty,0);
+ if(used+n>p.stock&&!confirm(`স্টক ${p.stock}। তবু যোগ করবেন?`))return;
+ cart.push({pid:p.id,name:p.name,qty:n,price:+$('pp').value||0,buy:p.buy});render();
+}
+function saveSale(){
+ if(!cart.length)return alert('কিছু যোগ করা হয়নি');
+ const total=cart.reduce((a,i)=>a+i.qty*i.price,0),cost=cart.reduce((a,i)=>a+i.qty*i.buy,0);
+ let paid=paidVal===''?total:Math.min(+paidVal,total);if(!saleCid)paid=total;
+ cart.forEach(i=>{const p=P(i.pid);if(p)p.stock-=i.qty});
+ S.txs.push({id:uid(),type:'sale',date:today(),cid:saleCid,cname:saleCid?C(saleCid).name:'',items:cart,total,paid,cost,by:USER});
+ cart=[];paidVal='';save();render();
+}
+function undoSale(t){t.items.forEach(i=>{const p=P(i.pid);if(p)p.stock+=i.qty})}
+function delTx(id){
+ const t=S.txs.find(x=>x.id===id);if(!confirm('এই লেনদেন মুছবেন?'+(t.type==='sale'?' (স্টক ফেরত যাবে)':'')))return;
+ if(t.type==='sale')undoSale(t);S.txs=S.txs.filter(x=>x.id!==id);save();render();
+}
+function editSale(id){
+ const t=S.txs.find(x=>x.id===id);if(cart.length&&!confirm('চলমান কার্ট মুছে যাবে। চালিয়ে যাবেন?'))return;
+ undoSale(t);S.txs=S.txs.filter(x=>x.id!==id);cart=t.items.map(i=>({...i}));saleCid=t.cid;paidVal=t.paid;tab='sale';save();render();
+}
+function editPay(id){const t=S.txs.find(x=>x.id===id),a=+prompt('নতুন জমার পরিমাণ',t.amount);if(a>0){t.amount=a;save();render()}}
+function bill(id){
+ const t=S.txs.find(x=>x.id===id),d=t.total-t.paid;
+ $('bill').innerHTML=`<h2 style="text-align:center;margin:0">${esc(SHOP)}</h2><div>তারিখ: ${t.date}<br>কাস্টমার: ${esc(t.cname||'নগদ')}</div><hr>
+ <table>${t.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}×${i.price}</td><td align="right">${i.qty*i.price}</td></tr>`).join('')}</table><hr>
+ <table><tr><td>মোট</td><td align="right"><b>${t.total}</b></td></tr><tr><td>জমা</td><td align="right">${t.paid}</td></tr><tr><td>এই বিলের বাকি</td><td align="right">${d}</td></tr>${t.cid?`<tr><td>মোট বাকি</td><td align="right">${due(t.cid)}</td></tr>`:''}</table><p style="text-align:center">ধন্যবাদ</p>`;
+ window.print();
+}
+function vCust(){
+ if(cur){
+  const c=C(cur),h=S.txs.filter(t=>t.cid===cur).slice().reverse(),d=due(cur);
+  return `<button class="b s" onclick="cur=null;render()">← ফিরুন</button>
+  <div class="c" style="margin-top:10px"><h2>${esc(c.name)} <span class="m">${esc(c.phone)}</span></h2><div class="k">মোট বাকি</div><div class="v ${d>0?'red':'grn'}">${money(d)}</div>
+  <div class="r" style="margin-top:8px"><input id="pa" type="number" min="1" placeholder="টাকা জমা নিলাম"><button class="b" onclick="pay()">জমা নিন</button></div></div>
+  <div class="c"><h2>হিসাব</h2>${h.map(txLine).join('')||'<div class="m">কোনো লেনদেন নেই</div>'}</div>`;
+ }
+ const list=S.customers.slice().sort((a,b)=>due(b.id)-due(a.id));
+ return `<div class="c"><h2>নতুন কাস্টমার</h2><div class="r"><input id="cn" placeholder="নাম"><input id="cp" placeholder="ফোন"><button class="b" onclick="addCust()">যোগ</button></div></div>
+ <div class="c"><h2>কাস্টমার তালিকা</h2>${list.map(c=>{const d=due(c.id);return `<div class="row" onclick="cur='${c.id}';render()" style="cursor:pointer"><div>${esc(c.name)}<div class="m">${esc(c.phone)}</div></div><b class="${d>0?'red':'grn'}">${money(d)}</b></div>`}).join('')||'<div class="m">কোনো কাস্টমার নেই</div>'}</div>`;
+}
+function addCust(){const n=$('cn').value.trim();if(!n)return;S.customers.push({id:uid(),name:n,phone:$('cp').value.trim()});save();render()}
+function pay(){const a=+$('pa').value;if(a<=0)return;S.txs.push({id:uid(),type:'pay',date:today(),by:USER,cid:cur,cname:C(cur).name,amount:a});save();render()}
+function vProd(){
+ return `<div class="c"><h2>নতুন প্রোডাক্ট</h2><div class="r"><input id="n" placeholder="পার্টসের নাম" style="flex:2"><input id="by" type="number" placeholder="কেনা দাম"><input id="pr" type="number" placeholder="বিক্রি দাম"><input id="st2" type="number" placeholder="স্টক"><button class="b" onclick="addProd()">যোগ</button></div></div>
+ <div class="c"><h2>স্টক</h2>${S.products.map(p=>`<div class="row"><div>${esc(p.name)}<div class="m">কেনা ${money(p.buy)} · বিক্রি ${money(p.price)}</div></div><div style="display:flex;gap:4px;align-items:center"><b class="${p.stock<=3?'red':''}">${p.stock}</b><input id="rs${p.id}" type="number" placeholder="+" style="width:60px"><button class="b s" onclick="restock('${p.id}')">+</button><button class="b s" onclick="editProd('${p.id}')">✎</button><button class="b s" onclick="delProd('${p.id}')">🗑</button></div></div>`).join('')||'<div class="m">কোনো প্রোডাক্ট নেই</div>'}</div>`;
+}
+function addProd(){const n=$('n').value.trim();if(!n)return;S.products.push({id:uid(),name:n,buy:+$('by').value||0,price:+$('pr').value||0,stock:+$('st2').value||0});save();render()}
+function restock(id){const n=+$('rs'+id).value;if(!n)return;P(id).stock+=n;save();render()}
+function editProd(id){const p=P(id),b=prompt('কেনা দাম',p.buy);if(b===null)return;const s=prompt('বিক্রি দাম',p.price);if(s===null)return;p.buy=+b||0;p.price=+s||0;save();render()}
+function delProd(id){if(confirm('প্রোডাক্ট মুছবেন?')){S.products=S.products.filter(p=>p.id!==id);save();render()}}
+async function uCall(a,d){
+ try{const r=await call(a,d);if(r.error)alert(r.error);else USERS=r.users;}catch(e){alert('সংযোগ হয়নি')}
+ if(tab==='users')render();
+}
+function vUsers(){
+ return `<div class="c"><h2>নতুন ইউজার (${USERS.length}/১০)</h2><div class="r"><input id="nu" placeholder="ইউজার নাম"><input id="np" placeholder="পাসওয়ার্ড"><button class="b" onclick="uCall('adduser',{name:$('nu').value,pass:$('np').value})">যোগ</button></div></div>
+ <div class="c"><h2>ইউজার তালিকা</h2>${USERS.map(u=>`<div class="row"><span>${esc(u)}</span><button class="b s" onclick="if(confirm('ইউজার মুছবেন?'))uCall('deluser',{name:'${esc(u)}'})">🗑</button></div>`).join('')||'<div class="m">কোনো ইউজার নেই</div>'}</div>`;
+}
+load();
+</script></body></html>
