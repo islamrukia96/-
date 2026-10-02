@@ -29,7 +29,7 @@ input,select{width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px
 <div class="w"><div class="hd"><h1>🔧 দোকান হিসাব</h1><div><span id="st" class="m"></span> <button class="b s" onclick="load()">↻</button> <button class="b s" onclick="logout()">বের হন</button></div></div>
 <nav id="nav"></nav><div id="main"></div></div><div id="bill"></div>
 <script>
-const API='https://script.google.com/macros/s/AKfycbzJlc55T53GLfqNTIX9sjVjrQYlZV-OEi2m9duarfavCEHMMT5L_KgIeqJ37LdxGv6p/exec', SHOP='চান্দাইকোনা মটরস';
+const API='https://script.google.com/macros/s/AKfycbySq8V1_JZhKu54qlcGRqlcuhnkKpdKLy_Cod_Z2UkcxeZjjoLa54X_2fy7YeR90-3u/exec', SHOP='চান্দাইকোনা মটরস';
 let S=null,PASS=localStorage.getItem('dh_pass')||'',USER=localStorage.getItem('dh_user')||'admin',ROLE='',USERS=[],q=Promise.resolve();
 let tab='home',cart=[],cur=null,saleCid='',paidVal='';
 const $=id=>document.getElementById(id);
